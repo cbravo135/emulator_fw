@@ -188,6 +188,7 @@ module CSC_GEM_Emulator (
     reg pack_rd = 0;
     reg pack_wr = 0;
     reg packing = 0;
+    reg chm_fb = 0;
 
     // Add-ons for Ben dCFEB testing:
     //-------------------------------
@@ -610,8 +611,8 @@ module CSC_GEM_Emulator (
 
     assign valid_gem0 = ~&{gem_packet0[10:9],gem_packet0[24:23]};
 
-    assign data_in0 = packing ? {gem_packet0[23:0],8'b0} : data_iram[31:0];
-    assign data_in1 = packing ? gem_packet0[55:24] : data_iram[63:32];
+    assign data_in0 = packing ? (chm_fb ? {gem_packet1[23:0],8'b0} : {gem_packet0[23:0],8'b0}) : data_iram[31:0];
+    assign data_in1 = packing ? (chm_fb ? gem_packet1[55:24] : gem_packet0[55:24]) : data_iram[63:32];
 
     wire bram_rd_en[MXBRAMS-1:0];
     wire bram_wr_en[MXBRAMS-1:0];
@@ -621,7 +622,8 @@ module CSC_GEM_Emulator (
     for (ibram=12'h000; ibram<MXBRAMS; ibram=ibram+1'b1) begin:bramgen
 
         assign bram_rd_en[ibram] = send_event || ((cmd_code==CMD_READ) & (bk_adr==ibram) & gtx_ready) || (pack_rd && ibram > 7);
-        assign bram_wr_en[ibram] = (cycle4 & (bk_adr==ibram) & gtx_ready) || (pack_wr && ibram == 0);
+        assign bram_wr_en[ibram] = (cycle4 & (bk_adr==ibram) & gtx_ready) || (pack_wr && 
+            ((bk_adr == 0 && chm_fb ==0 && ibram == 0) || (bk_adr == 0 && chm_fb == 1 && ibram == 5) || (bk_adr == 1 && chm_fb ==0 && ibram == 6) || (bk_adr == 1 && chm_fb == 1 && ibram == 7)));
 
         RAMB36E1 #(
             .DOA_REG        (0),         // Optional output register ( 0 or 1)
@@ -1164,6 +1166,7 @@ module CSC_GEM_Emulator (
                     pack_state <= 2'd1;
                     pack_rd <= 1'b1;
                     packing <= 1'b1;
+                    chm_fb <= 1'b0;
                 end
             end
             2'd1: begin
@@ -1179,6 +1182,15 @@ module CSC_GEM_Emulator (
                 pack_rd_adr <= pack_rd_adr + 1;
                 pack_wr_adr <= pack_wr_adr + 1;
                 if(pack_wr_adr == 16'd2047) begin
+                    pack_state <= 2'd3;
+                    pack_wr_adr <= 16'd0;
+                    chm_fb <= 1'b1;
+                end
+            end
+            2'd3: begin
+                pack_rd_adr <= pack_rd_adr + 1;
+                pack_wr_adr <= pack_wr_adr + 1;
+                if(pack_wr_adr == 16'd2047) begin
                     pack_rd <= 1'b0;
                     pack_wr <= 1'b0;
                     pack_state <= 2'd0;
@@ -1186,9 +1198,6 @@ module CSC_GEM_Emulator (
                     pack_wr_adr <= 16'd0;
                     packing <= 1'b0;
                 end
-            end
-            2'd3: begin
-                pack_state <= 2'd0;
             end
         endcase
     end
