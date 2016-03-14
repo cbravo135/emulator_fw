@@ -189,6 +189,7 @@ module CSC_GEM_Emulator (
     reg pack_wr = 0;
     reg packing = 0;
     reg chm_fb = 0;
+    reg [11:0] chm_adr;
 
     // Add-ons for Ben dCFEB testing:
     //-------------------------------
@@ -623,7 +624,7 @@ module CSC_GEM_Emulator (
 
         assign bram_rd_en[ibram] = send_event || ((cmd_code==CMD_READ) & (bk_adr==ibram) & gtx_ready) || (pack_rd && ibram > 7);
         assign bram_wr_en[ibram] = (cycle4 & (bk_adr==ibram) & gtx_ready) || (pack_wr && 
-            ((bk_adr == 0 && chm_fb ==0 && ibram == 0) || (bk_adr == 0 && chm_fb == 1 && ibram == 5) || (bk_adr == 1 && chm_fb ==0 && ibram == 6) || (bk_adr == 1 && chm_fb == 1 && ibram == 7)));
+            ((chm_adr == 0 && chm_fb ==0 && ibram == 0) || (chm_adr == 0 && chm_fb == 1 && ibram == 5) || (chm_adr == 1 && chm_fb ==0 && ibram == 6) || (chm_adr == 1 && chm_fb == 1 && ibram == 7)));
 
         RAMB36E1 #(
             .DOA_REG        (0),         // Optional output register ( 0 or 1)
@@ -1167,6 +1168,7 @@ module CSC_GEM_Emulator (
                     pack_rd <= 1'b1;
                     packing <= 1'b1;
                     chm_fb <= 1'b0;
+                    chm_adr <= bk_adr;
                 end
             end
             2'd1: begin
