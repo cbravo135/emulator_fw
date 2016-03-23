@@ -610,7 +610,7 @@ module CSC_GEM_Emulator (
     assign valid_gem0 = ~&{gem_packet0[10:9],gem_packet0[24:23]};
 
     assign data_in0 = packing ? (chm_fb ? gem_packet1[31:0] : gem_packet0[31:0]) : data_iram[31:0];
-    assign data_in1 = packing ? (chm_fb ? {8'b0,gem_packet1[55:32]} : {8'b0,gem_packet0[55:32])} : data_iram[63:32];
+    assign data_in1 = packing ? (chm_fb ? {8'b0,gem_packet1[55:32]} : {8'b0,gem_packet0[55:32]}) : data_iram[63:32];
 
     wire bram_rd_en[MXBRAMS-1:0];
     wire bram_wr_en[MXBRAMS-1:0];
