@@ -491,8 +491,7 @@ module CSC_GEM_Emulator (
             ibx <= (dump_enable_r) ? 8'h0 : (ibx<nbx_r) ? ibx + 1'b1 : ibx;
 
         // JGhere, use rd_ptr as BRAM RdAddr unless f3f3 is set ? use sel_rdclk for it!
-        if(!pack_rd) rd_ptr <= ibx_reset ? 16'b0 : (dump_enable_rr || event_enable_r) && (!event_done) ? rd_ptr + 1'b1 : rd_ptr;
-        else rd_ptr <= {2'b0,pack_rd_adr[15:2]};
+        rd_ptr <= ibx_reset ? 16'b0 : (dump_enable_rr || event_enable_r) && (!event_done) ? rd_ptr + 1'b1 : rd_ptr;
 
     end // close rdclk
 
@@ -599,7 +598,7 @@ module CSC_GEM_Emulator (
 // Block Ram Generation for Pattern Injection
 //----------------------------------------------------------------------------------------------------------------------
 
-    assign rd_addr = (sel_rdclk) ? tx_adr[10:2] : rd_ptr[8:0];
+    assign rd_addr = (pack_rd) ? pack_rd_adr[10:2] : (sel_rdclk) ? tx_adr[10:2] : rd_ptr[8:0];
     assign wr_addr = (pack_wr) ? pack_wr_adr[10:2] : rx_adr_r[10:2];
 
     wire [31:0] data_in0;
