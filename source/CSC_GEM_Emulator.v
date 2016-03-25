@@ -608,6 +608,7 @@ module CSC_GEM_Emulator (
 
     assign valid_gem0 = ~&{gem_packet0[10:9],gem_packet0[24:23]};
 
+    // Choose data to be written to RAM
     assign data_in0 = packing ? (chm_fb ? gem_packet1[31:0] : gem_packet0[31:0]) : data_iram[31:0];
     assign data_in1 = packing ? (chm_fb ? {8'b0,gem_packet1[55:32]} : {8'b0,gem_packet0[55:32]}) : data_iram[63:32];
 
@@ -618,6 +619,7 @@ module CSC_GEM_Emulator (
     generate
     for (ibram=12'h000; ibram<MXBRAMS; ibram=ibram+1'b1) begin:bramgen
 
+        //Enable the correct block of ram to be read and/or written to
         assign bram_rd_en[ibram] = send_event || ((cmd_code==CMD_READ) & (bk_adr==ibram) & gtx_ready) || (pack_rd && ibram > 7);
         assign bram_wr_en[ibram] = (cycle4 & (bk_adr==ibram) & gtx_ready) || (pack_wr && 
             ((chm_adr == 0 && chm_fb ==0 && ibram == 0) || (chm_adr == 0 && chm_fb == 1 && ibram == 5) || (chm_adr == 1 && chm_fb ==0 && ibram == 6) || (chm_adr == 1 && chm_fb == 1 && ibram == 7)));
@@ -1147,6 +1149,8 @@ module CSC_GEM_Emulator (
 
 //----------------------------------------------------------------------------------------------------------------------
 // pack state machine
+// Organize reading VFAT RAMS into cluster packer
+// and writting output of cluster packing into fiber RAMs
 //----------------------------------------------------------------------------------------------------------------------
 
     reg [1:0] pack_state = 2'd0;
@@ -1157,7 +1161,7 @@ module CSC_GEM_Emulator (
 
     always @(posedge snap_clk2) begin
         case (pack_state)
-            2'd0: begin
+            2'd0: begin // Idol State
                 if(start_pack)
                 begin
                     pack_state <= 2'd1;
@@ -1167,7 +1171,7 @@ module CSC_GEM_Emulator (
                     chm_adr <= bk_adr;
                 end
             end
-            2'd1: begin
+            2'd1: begin  // Read only state
                 pack_rd_adr <= pack_rd_adr + 1;
                 pack_delay <= pack_delay + 1;
                 if(pack_delay == 4'd13) begin
@@ -1176,7 +1180,7 @@ module CSC_GEM_Emulator (
                     pack_delay <= 4'b0;
                 end
             end
-            2'd2: begin
+            2'd2: begin // Write into first fiber RAM
                 pack_rd_adr <= pack_rd_adr + 1;
                 pack_wr_adr <= pack_wr_adr + 1;
                 if(pack_wr_adr == 16'd2047) begin
@@ -1185,7 +1189,7 @@ module CSC_GEM_Emulator (
                     chm_fb <= 1'b1;
                 end
             end
-            2'd3: begin
+            2'd3: begin // Write into second fiber RAM
                 pack_rd_adr <= pack_rd_adr + 1;
                 pack_wr_adr <= pack_wr_adr + 1;
                 if(pack_wr_adr == 16'd2047) begin
